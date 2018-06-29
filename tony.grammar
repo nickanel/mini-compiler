@@ -1,0 +1,167 @@
+Package tony;
+
+Helpers
+	digit = ['0' .. '9'];
+	letter = ['a' .. 'z']|['A' .. 'Z']; 
+	cr = 13; 
+	lf = 10;
+	all = [0..127]; 
+	eol = lf | cr | cr lf ;
+	not_eol = [all - [cr + lf]]; 
+	tab = 9;
+	singlequote = 39;
+	underscore = '_';
+	questionmark = '?';		
+	commoncharacter = [[[32..126] - 39] - [34 + 92]];
+	hexadeccharacter = digit | ['a'..'f'] | ['A'..'F'];
+	escapesequence = '\' ('n' | 't' | 'r' | '0' | '\' | singlequote | '"' | 'x' hexadeccharacter hexadeccharacter);	
+	
+Tokens
+	def = 'def';
+	end = 'end';
+	ref = 'ref';
+	int = 'int';
+	bool = 'bool';
+	char = 'char';
+	list = 'list';
+	decl = 'decl';
+	exit = 'exit';
+	return = 'return';
+	if = 'if';
+	elsif = 'elsif';
+	else = 'else';
+	for = 'for';
+	skip = 'skip';
+	mod = 'mod';
+	true = 'true';
+	false = 'false';
+	not = 'not';
+	and = 'and';
+	or = 'or';
+	new = 'new';
+	nil = 'nil';
+	nilquestionmark = 'nil?';
+	head = 'head';
+	tail = 'tail';
+	plus = '+';
+	minus = '-';
+	mul = '*';
+	div = '/';
+	hash = '#';
+	eq = '=';
+	noteq = '<>';
+	less = '<';
+	greater = '>';
+	lesseq = '<=';
+	greatereq = '>=';
+	l_par = '(';
+	r_par = ')';
+	l_br = '[';
+	r_br = ']';
+	comma=',';
+	semicolon = ';';
+	colon = ':';
+	assign = ':=';
+	id = letter (letter | digit | underscore | questionmark)*;
+	number = digit+;
+	constchar = singlequote (commoncharacter | escapesequence) singlequote;
+	string = '"'(commoncharacter | escapesequence)* '"';
+	blank = (' ' | lf | cr | tab);
+	onelinecomment = '%' not_eol* eol;
+	multiplelinescomment = '<' '*' all* '*' '>';
+
+Ignored Tokens
+	blank, onelinecomment, multiplelinescomment;
+
+Productions
+
+	program = func_def;
+	
+	func_def = def header colon function* stmt+ end;
+	
+	function = 	{function_def} func_def |
+				{function_decl} func_decl |
+				{variable_def} var_def;
+	
+	header = type? id l_par formals? r_par;
+	
+	formals = formal semicolon_formal*;
+	
+	semicolon_formal = semicolon formal;
+	
+	formal = ref? type id comma_id*;
+	
+	comma_id = comma id;
+	
+	type = {int} int | {bool} bool | {char} char | {type} type l_br r_br | {list} list l_br type r_br;
+	
+	func_decl = decl header;
+	
+	var_def = type id comma_id*;
+	
+	stmt = {simple} simple | {exit} exit | {return} return expr | {if} if expr colon stmt+ elseif_stmt* else_stmt? end |
+	       {for} for [left]:simple_list [l]:semicolon expr [r]:semicolon [right]:simple_list colon stmt+ end;
+		   
+	elseif_stmt = elsif expr colon stmt+;
+	
+	else_stmt = else colon stmt+;
+	
+	simple = {skip} skip | {atom} atom assign expr | {call} call;
+	
+	simple_list = simple comma_simple*;
+	
+	comma_simple = comma simple;
+	
+	call = id l_par exprs? r_par;
+	
+	exprs = expr comma_expr*;
+	
+	comma_expr = comma expr;
+	
+	atom = {id} id | {string} string | {atom} atom l_br expr r_br | {call} call;
+	
+	expr = {andexpression} andexpression |
+		   {or} expr or andexpression;
+				   
+	andexpression =	{notexpression} notexpression |
+					{and} andexpression and notexpression;
+
+	notexpression = {comparisonexpression} comparisonexpression |
+				    {not} not comparisonexpression;
+	
+	comparisonexpression = {hashexpression} hashexpression |
+					       {equal} comparisonexpression eq hashexpression |
+					       {notequal} comparisonexpression noteq hashexpression |
+						   {less} comparisonexpression less hashexpression |
+						   {greater} comparisonexpression greater hashexpression |
+						   {lessequal} comparisonexpression lesseq hashexpression |
+						   {greaterequal} comparisonexpression greatereq hashexpression;
+
+	hashexpression = {additionexpression} additionexpression |
+					 {hash} additionexpression hash hashexpression;
+						   
+	additionexpression = {multiplication} multiplication |
+					    {addition} additionexpression plus multiplication|
+					    {subtraction} additionexpression minus multiplication;
+
+	multiplication = {signexpression} signexpression |
+					 {multiplication} multiplication mul signexpression |
+					 {division} multiplication div signexpression |
+					 {modulo} multiplication mod signexpression;
+
+	signexpression = {something} something |
+					 {positive} plus something |
+					 {negative} minus something;
+	
+	something =  {atom} atom |
+				 {constint} number |
+				 {constchar} constchar |
+				 {expr} l_par expr r_par |
+				 {new} new type l_br expr r_br |
+				 {nil} nil |
+				 {nilquest} nilquestionmark l_par expr r_par |
+				 {head} head l_par expr r_par |
+				 {tail} tail l_par expr r_par |
+				 {true} true |
+				 {false} false;				
+				
